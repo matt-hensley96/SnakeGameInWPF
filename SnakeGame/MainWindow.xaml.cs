@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 
 namespace SnakeGame
 {
@@ -11,16 +14,41 @@ namespace SnakeGame
     /// </summary>
     public partial class MainWindow : Window
     {
-        private const int GridCellSize = 20;
+        public enum SnakeDirection
+        {
+            Left,
+            Right,
+            Up,
+            Down
+        }
+
+        private const int _gridCellSize = 20;
+        private const int _snakeStartLength = 3;
+        private const int _snakeStartSpeed = 400;
+        private const int _snakeSpeedThreshold = 100;
+        private readonly SolidColorBrush _snakeBodyBrush = Brushes.Green;
+        private readonly List<SnakeBodySegment> _snakeBodySegments = new List<SnakeBodySegment>();
+        private readonly SolidColorBrush _snakeHeadBrush = Brushes.YellowGreen;
+        private readonly DispatcherTimer _timer = new DispatcherTimer();
+
+        private SnakeDirection _snakeDirection = SnakeDirection.Right;
+        private int _snakeLength;
 
         public MainWindow()
         {
             InitializeComponent();
+            _timer.Tick += Timer_Tick;
+        }
+
+        private void Timer_Tick(object sender, EventArgs e)
+        {
+            MoveSnake();
         }
 
         private void MainWindow_ContentRendered(object? sender, EventArgs e)
         {
             DrawGameArea();
+            StartNewGame();
         }
 
         private void DrawGameArea()
@@ -35,8 +63,8 @@ namespace SnakeGame
             {
                 var rect = new Rectangle
                 {
-                    Width = GridCellSize,
-                    Height = GridCellSize,
+                    Width = _gridCellSize,
+                    Height = _gridCellSize,
                     Fill = nextIsOdd ? Brushes.White : Brushes.LightBlue
                 };
 
@@ -45,12 +73,12 @@ namespace SnakeGame
                 Canvas.SetLeft(rect, nextX);
 
                 nextIsOdd = !nextIsOdd;
-                nextX += GridCellSize;
+                nextX += _gridCellSize;
 
                 if (nextX >= GameArea.ActualWidth)
                 {
                     nextX = 0;
-                    nextY += GridCellSize;
+                    nextY += _gridCellSize;
                     rowCounter++;
                     nextIsOdd = rowCounter % 2 != 0;
                 }
@@ -58,6 +86,83 @@ namespace SnakeGame
                 if (nextY >= GameArea.ActualHeight)
                     doneDrawingBackground = true;
             }
+        }
+
+        private void StartNewGame()
+        {
+            _snakeLength = _snakeStartLength;
+            _snakeDirection = SnakeDirection.Right;
+            _snakeBodySegments.Add(new SnakeBodySegment
+                { Position = new Point(_gridCellSize * 5, _gridCellSize * 5) });
+            _timer.Interval = TimeSpan.FromMilliseconds(_snakeStartSpeed);
+
+            DrawSnake();
+
+            _timer.IsEnabled = true;
+        }
+
+        private void DrawSnake()
+        {
+            foreach (SnakeBodySegment snakeSegment in _snakeBodySegments.Where(snakeSegment => snakeSegment.UiElement == null))
+            {
+                snakeSegment.UiElement = new Rectangle
+                {
+                    Width = _gridCellSize,
+                    Height = _gridCellSize,
+                    Fill = snakeSegment.IsHead ? _snakeHeadBrush : _snakeBodyBrush
+                };
+
+                GameArea.Children.Add(snakeSegment.UiElement);
+                Canvas.SetTop(snakeSegment.UiElement, snakeSegment.Position.Y);
+                Canvas.SetLeft(snakeSegment.UiElement, snakeSegment.Position.X);
+            }
+        }
+
+        private void MoveSnake()
+        {
+            while (_snakeBodySegments.Count >= _snakeLength)
+            {
+                GameArea.Children.Remove(_snakeBodySegments[0].UiElement);
+                _snakeBodySegments.RemoveAt(0);
+            }
+
+            foreach (SnakeBodySegment snakeSegment in _snakeBodySegments)
+            {
+                ((Rectangle)snakeSegment.UiElement).Fill = _snakeBodyBrush;
+                snakeSegment.IsHead = false;
+            }
+
+            SnakeBodySegment snakeHead = _snakeBodySegments[^1];
+            double nextX = snakeHead.Position.X;
+            double nextY = snakeHead.Position.Y;
+
+            switch (_snakeDirection)
+            {
+                case SnakeDirection.Left:
+                    nextX -= _gridCellSize;
+                    break;
+                case SnakeDirection.Right:
+                    nextX += _gridCellSize;
+                    break;
+                case SnakeDirection.Up:
+                    nextY -= _gridCellSize;
+                    break;
+                case SnakeDirection.Down:
+                    nextY += _gridCellSize;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            _snakeBodySegments.Add(new SnakeBodySegment
+            {
+                Position = new Point(nextX, nextY),
+                IsHead = true
+            });
+
+            DrawSnake();
+
+            // DoCollisionCheck();
         }
     }
 }

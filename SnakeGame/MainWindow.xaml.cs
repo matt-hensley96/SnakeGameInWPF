@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
@@ -51,7 +52,6 @@ namespace SnakeGame
         private void MainWindow_ContentRendered(object? sender, EventArgs e)
         {
             DrawGameArea();
-            StartNewGame();
         }
 
         private void DrawGameArea()
@@ -201,6 +201,41 @@ namespace SnakeGame
             GameArea.Children.Add(_snakeFood);
             Canvas.SetTop(_snakeFood, foodPosition.Y);
             Canvas.SetLeft(_snakeFood, foodPosition.X);
+        }
+
+        private void Window_KeyUp(object sender, KeyEventArgs e)
+        {
+            SnakeDirection originalSnakeDirection = _snakeDirection;
+
+            switch (e.Key)
+            {
+                case Key.Up:
+                    if (_snakeDirection != SnakeDirection.Down)
+                        _snakeDirection = SnakeDirection.Up;
+                    break;
+
+                case Key.Down:
+                    if (_snakeDirection != SnakeDirection.Up)
+                        _snakeDirection = SnakeDirection.Down;
+                    break;
+
+                case Key.Left:
+                    if (_snakeDirection != SnakeDirection.Right)
+                        _snakeDirection = SnakeDirection.Left;
+                    break;
+
+                case Key.Right:
+                    if (_snakeDirection != SnakeDirection.Left)
+                        _snakeDirection = SnakeDirection.Right;
+                    break;
+
+                case Key.Space:
+                    StartNewGame();
+                    break;
+            }
+
+            if (_snakeDirection != originalSnakeDirection)
+                MoveSnake();
         }
     }
 }

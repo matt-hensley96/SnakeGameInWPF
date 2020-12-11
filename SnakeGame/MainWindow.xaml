@@ -5,10 +5,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:SnakeGame"
         mc:Ignorable="d"
-        Title="Snake - Score 0" SizeToContent="WidthAndHeight" ContentRendered="MainWindow_ContentRendered">
+        Title="Snake - Score 0" SizeToContent="WidthAndHeight" ContentRendered="MainWindow_ContentRendered" KeyUp="Window_KeyUp">
     <Border BorderBrush="Black" BorderThickness="5">
         <Canvas Name="GameArea" ClipToBounds="True" Width="400" Height="500">
-
         </Canvas>
     </Border>
 </Window>

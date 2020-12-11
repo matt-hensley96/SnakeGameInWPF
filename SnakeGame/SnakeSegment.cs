@@ -2,7 +2,7 @@
 
 namespace SnakeGame
 {
-    public class SnakeBodySegment
+    public class SnakeSegment
     {
         public UIElement UiElement { get; set; }
         public Point Position { get; set; }

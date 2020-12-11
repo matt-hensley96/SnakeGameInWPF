@@ -26,12 +26,15 @@ namespace SnakeGame
         private const int _snakeStartLength = 3;
         private const int _snakeStartSpeed = 400;
         private const int _snakeSpeedThreshold = 100;
+        private readonly SolidColorBrush _foodBrush = Brushes.Red;
+        private readonly Random _random = new Random();
         private readonly SolidColorBrush _snakeBodyBrush = Brushes.Green;
-        private readonly List<SnakeBodySegment> _snakeBodySegments = new List<SnakeBodySegment>();
         private readonly SolidColorBrush _snakeHeadBrush = Brushes.YellowGreen;
+        private readonly List<SnakeSegment> _snakeSegments = new List<SnakeSegment>();
         private readonly DispatcherTimer _timer = new DispatcherTimer();
 
         private SnakeDirection _snakeDirection = SnakeDirection.Right;
+        private UIElement _snakeFood;
         private int _snakeLength;
 
         public MainWindow()
@@ -92,18 +95,21 @@ namespace SnakeGame
         {
             _snakeLength = _snakeStartLength;
             _snakeDirection = SnakeDirection.Right;
-            _snakeBodySegments.Add(new SnakeBodySegment
+
+            _snakeSegments.Add(new SnakeSegment
                 { Position = new Point(_gridCellSize * 5, _gridCellSize * 5) });
+
             _timer.Interval = TimeSpan.FromMilliseconds(_snakeStartSpeed);
 
             DrawSnake();
+            DrawSnakeFood();
 
             _timer.IsEnabled = true;
         }
 
         private void DrawSnake()
         {
-            foreach (SnakeBodySegment snakeSegment in _snakeBodySegments.Where(snakeSegment => snakeSegment.UiElement == null))
+            foreach (SnakeSegment snakeSegment in _snakeSegments.Where(snakeSegment => snakeSegment.UiElement == null))
             {
                 snakeSegment.UiElement = new Rectangle
                 {
@@ -120,19 +126,19 @@ namespace SnakeGame
 
         private void MoveSnake()
         {
-            while (_snakeBodySegments.Count >= _snakeLength)
+            while (_snakeSegments.Count >= _snakeLength)
             {
-                GameArea.Children.Remove(_snakeBodySegments[0].UiElement);
-                _snakeBodySegments.RemoveAt(0);
+                GameArea.Children.Remove(_snakeSegments[0].UiElement);
+                _snakeSegments.RemoveAt(0);
             }
 
-            foreach (SnakeBodySegment snakeSegment in _snakeBodySegments)
+            foreach (SnakeSegment snakeSegment in _snakeSegments)
             {
                 ((Rectangle)snakeSegment.UiElement).Fill = _snakeBodyBrush;
                 snakeSegment.IsHead = false;
             }
 
-            SnakeBodySegment snakeHead = _snakeBodySegments[^1];
+            SnakeSegment snakeHead = _snakeSegments[^1];
             double nextX = snakeHead.Position.X;
             double nextY = snakeHead.Position.Y;
 
@@ -154,7 +160,7 @@ namespace SnakeGame
                     throw new ArgumentOutOfRangeException();
             }
 
-            _snakeBodySegments.Add(new SnakeBodySegment
+            _snakeSegments.Add(new SnakeSegment
             {
                 Position = new Point(nextX, nextY),
                 IsHead = true
@@ -163,6 +169,38 @@ namespace SnakeGame
             DrawSnake();
 
             // DoCollisionCheck();
+        }
+
+        private Point GetNextFoodPosition()
+        {
+            while (true)
+            {
+                int maxX = (int)GameArea.ActualWidth / _gridCellSize;
+                int maxY = (int)GameArea.ActualHeight / _gridCellSize;
+                int foodX = _random.Next(0, maxX) * _gridCellSize;
+                int foodY = _random.Next(0, maxY) * _gridCellSize;
+
+                if (_snakeSegments.Any(snakeSegment => snakeSegment.Position.X == foodX && snakeSegment.Position.Y == foodY))
+                    continue;
+
+                return new Point(foodX, foodY);
+            }
+        }
+
+        private void DrawSnakeFood()
+        {
+            Point foodPosition = GetNextFoodPosition();
+
+            _snakeFood = new Ellipse
+            {
+                Width = _gridCellSize,
+                Height = _gridCellSize,
+                Fill = _foodBrush
+            };
+
+            GameArea.Children.Add(_snakeFood);
+            Canvas.SetTop(_snakeFood, foodPosition.Y);
+            Canvas.SetLeft(_snakeFood, foodPosition.X);
         }
     }
 }

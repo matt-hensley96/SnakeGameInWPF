@@ -33,6 +33,7 @@ namespace SnakeGame
         private readonly SolidColorBrush _snakeHeadBrush = Brushes.YellowGreen;
         private readonly List<SnakeSegment> _snakeSegments = new List<SnakeSegment>();
         private readonly DispatcherTimer _timer = new DispatcherTimer();
+        private int _currentScore;
 
         private SnakeDirection _snakeDirection = SnakeDirection.Right;
         private UIElement _snakeFood;
@@ -93,6 +94,16 @@ namespace SnakeGame
 
         private void StartNewGame()
         {
+            foreach (SnakeSegment snakeSegment in _snakeSegments
+                .Where(snakeSegment => snakeSegment.UiElement != null))
+                GameArea.Children.Remove(snakeSegment.UiElement);
+
+            _snakeSegments.Clear();
+
+            if (_snakeFood != null)
+                GameArea.Children.Remove(_snakeFood);
+
+            _currentScore = 0;
             _snakeLength = _snakeStartLength;
             _snakeDirection = SnakeDirection.Right;
 
@@ -104,6 +115,7 @@ namespace SnakeGame
             DrawSnake();
             DrawSnakeFood();
 
+            UpdateGameStatus();
             _timer.IsEnabled = true;
         }
 
@@ -168,7 +180,53 @@ namespace SnakeGame
 
             DrawSnake();
 
-            // DoCollisionCheck();
+            DoCollisionCheck();
+        }
+
+        private void DoCollisionCheck()
+        {
+            SnakeSegment snakeHead = _snakeSegments[^1];
+
+            if (snakeHead.Position.X == Canvas.GetLeft(_snakeFood) &&
+                snakeHead.Position.Y == Canvas.GetTop(_snakeFood))
+                EatSnakeFood();
+
+            if (snakeHead.Position.Y < 0 ||
+                snakeHead.Position.Y >= GameArea.ActualHeight ||
+                snakeHead.Position.X < 0 ||
+                snakeHead.Position.X >= GameArea.ActualWidth)
+                EndGame();
+
+            foreach (SnakeSegment snakeSegment in _snakeSegments.Take(_snakeSegments.Count - 1))
+                if (snakeHead.Position.X == snakeSegment.Position.X &&
+                    snakeHead.Position.Y == snakeSegment.Position.Y)
+                    EndGame();
+        }
+
+        private void EndGame()
+        {
+            _timer.IsEnabled = false;
+
+            MessageBox.Show("Uh oh! You died! \n\n Press space bar to try again!", "SnakeWPF");
+        }
+
+        private void EatSnakeFood()
+        {
+            _snakeLength++;
+            _currentScore++;
+
+            int timerInterval = Math.Max(_snakeSpeedThreshold, (int)_timer.Interval.TotalMilliseconds - _currentScore * 2);
+            _timer.Interval = TimeSpan.FromMilliseconds(timerInterval);
+
+            GameArea.Children.Remove(_snakeFood);
+            DrawSnakeFood();
+
+            UpdateGameStatus();
+        }
+
+        private void UpdateGameStatus()
+        {
+            Title = $"SnakeWPF - Score: {_currentScore} - Speed: {_timer.Interval.TotalMilliseconds}";
         }
 
         private Point GetNextFoodPosition()

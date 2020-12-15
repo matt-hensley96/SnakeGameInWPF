@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -7,6 +9,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using System.Xml.Serialization;
 
 namespace SnakeGame
 {
@@ -27,6 +30,7 @@ namespace SnakeGame
         private const int _snakeStartLength = 3;
         private const int _snakeStartSpeed = 400;
         private const int _snakeSpeedThreshold = 100;
+        private const int _maxHighScoreListEntryCount = 5;
         private readonly SolidColorBrush _foodBrush = Brushes.Red;
         private readonly Random _random = new Random();
         private readonly SolidColorBrush _snakeBodyBrush = Brushes.Green;
@@ -43,7 +47,10 @@ namespace SnakeGame
         {
             InitializeComponent();
             _timer.Tick += Timer_Tick;
+            LoadHighScoreList();
         }
+
+        public ObservableCollection<HighScore> HighScores { get; set; } = new ObservableCollection<HighScore>();
 
         private void Timer_Tick(object sender, EventArgs e)
         {
@@ -100,6 +107,33 @@ namespace SnakeGame
                 MoveSnake();
         }
 
+        private void LoadHighScoreList()
+        {
+            if (!File.Exists("HighScoreList.xml"))
+                return;
+
+            var serializer = new XmlSerializer(typeof(List<HighScore>));
+
+            using (Stream reader = new FileStream("HighScoreList.xml", FileMode.Open))
+            {
+                var tempList = (List<HighScore>)serializer.Deserialize(reader);
+                HighScores.Clear();
+
+                foreach (HighScore item in tempList.OrderByDescending(x => x.Score))
+                    HighScores.Add(item);
+            }
+        }
+
+        private void SaveHighScoreList()
+        {
+            var serializer = new XmlSerializer(typeof(ObservableCollection<HighScore>));
+
+            using (Stream writer = new FileStream("snake_highscorelist.xml", FileMode.Create))
+            {
+                serializer.Serialize(writer, HighScores);
+            }
+        }
+
         private void DrawGameArea()
         {
             var doneDrawingBackground = false;
@@ -139,6 +173,10 @@ namespace SnakeGame
 
         private void StartNewGame()
         {
+            BorderWelcomeMessage.Visibility = Visibility.Collapsed;
+            BorderHighScoreList.Visibility = Visibility.Collapsed;
+            BorderEndOfGame.Visibility = Visibility.Collapsed;
+
             foreach (SnakeSegment snakeSegment in _snakeSegments
                 .Where(snakeSegment => snakeSegment.UiElement != null))
                 GameArea.Children.Remove(snakeSegment.UiElement);
@@ -302,9 +340,61 @@ namespace SnakeGame
 
         private void EndGame()
         {
-            _timer.IsEnabled = false;
+            var isNewHighScore = false;
 
-            MessageBox.Show("Uh oh! You died! \n\n Press space bar to try again!", "SnakeWPF");
+            if (_currentScore > 0)
+            {
+                int lowestHighScore = HighScores.Count > 0 ? HighScores.Min(x => x.Score) : 0;
+                if (_currentScore > lowestHighScore || HighScores.Count < _maxHighScoreListEntryCount)
+                {
+                    BorderNewHighScore.Visibility = Visibility.Visible;
+                    TextBoxPlayerName.Focus();
+                    isNewHighScore = true;
+                }
+            }
+
+            if (!isNewHighScore)
+            {
+                TextBlockFinalScore.Text = _currentScore.ToString();
+                BorderEndOfGame.Visibility = Visibility.Visible;
+            }
+
+            _timer.IsEnabled = false;
+        }
+
+        private void BtnShowHighScoreList_Click(object sender, RoutedEventArgs e)
+        {
+            BorderWelcomeMessage.Visibility = Visibility.Collapsed;
+            BorderHighScoreList.Visibility = Visibility.Visible;
+        }
+
+        private void BtnAddToHighScoreList_Click(object sender, RoutedEventArgs e)
+        {
+            var newIndex = 0;
+
+            if (HighScores.Count > 0 && _currentScore < HighScores.Max(hs => hs.Score))
+            {
+                HighScore scoreAboveCurrentScore = HighScores
+                    .OrderByDescending(hs => hs.Score)
+                    .First(hs => hs.Score >= _currentScore);
+
+                if (scoreAboveCurrentScore != null)
+                    newIndex = HighScores.IndexOf(scoreAboveCurrentScore) + 1;
+            }
+
+            HighScores.Insert(newIndex, new HighScore
+            {
+                PlayerName = TextBoxPlayerName.Text,
+                Score = _currentScore
+            });
+
+            while (HighScores.Count > _maxHighScoreListEntryCount)
+                HighScores.RemoveAt(_maxHighScoreListEntryCount);
+
+            SaveHighScoreList();
+
+            BorderNewHighScore.Visibility = Visibility.Collapsed;
+            BorderHighScoreList.Visibility = Visibility.Visible;
         }
     }
 }

@@ -11,7 +11,7 @@
         ResizeMode="NoResize" WindowStyle="None" Background="Black" MouseDown="MainWindow_OnMouseDown">
 
     <Window.Resources>
-        <CollectionViewSource Source="{Binding ElementName=Window, Path=HighScoreList}" x:Key="HighScoreListViewSource">
+        <CollectionViewSource Source="{Binding ElementName=Window, Path=HighScores}" x:Key="HighScoreListViewSource">
             <CollectionViewSource.SortDescriptions>
                 <scm:SortDescription Direction="Descending" PropertyName="Score" />
             </CollectionViewSource.SortDescriptions>

@@ -1,0 +1,3 @@
+If you press 'space' when entering your name onto the high score list, it starts a new game and _currentScore is reset so you lose your score!
+
+It seems like your score is always added to the list even when it isn't a high score

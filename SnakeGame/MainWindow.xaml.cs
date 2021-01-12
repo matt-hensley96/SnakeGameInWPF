@@ -37,11 +37,12 @@ namespace SnakeGame
         private readonly SolidColorBrush _snakeHeadBrush = Brushes.YellowGreen;
         private readonly List<SnakeSegment> _snakeSegments = new List<SnakeSegment>();
         private readonly DispatcherTimer _timer = new DispatcherTimer();
+
         private int _currentScore;
+        private int _snakeLength;
 
         private SnakeDirection _snakeDirection = SnakeDirection.Right;
         private UIElement _snakeFood;
-        private int _snakeLength;
 
         public MainWindow()
         {
@@ -60,6 +61,49 @@ namespace SnakeGame
         private void MainWindow_ContentRendered(object? sender, EventArgs e)
         {
             DrawGameArea();
+            PlayOpenAppSound();
+        }
+
+        private static void PlayGameOverSound()
+        {
+            var gameOverMediaPlayer = new MediaPlayer();
+            gameOverMediaPlayer.Open(new Uri("../../../Sounds/GameOver.mp3", UriKind.Relative));
+            gameOverMediaPlayer.Play();
+        }
+
+        private static void PlayCrashSelfSound()
+        {
+            var crashSelfMediaPlayer = new MediaPlayer();
+            crashSelfMediaPlayer.Open(new Uri("../../../Sounds/CrashSelf.mp3", UriKind.Relative));
+            crashSelfMediaPlayer.Play();
+        }
+
+        private static void PlayCrashWallSound()
+        {
+            var crashWallMediaPlayer = new MediaPlayer();
+            crashWallMediaPlayer.Open(new Uri("../../../Sounds/CrashWall.mp3", UriKind.Relative));
+            crashWallMediaPlayer.Play();
+        }
+
+        private static void PlayEatSound()
+        {
+            var eatMediaPlayer = new MediaPlayer();
+            eatMediaPlayer.Open(new Uri("../../../Sounds/Eat.mp3", UriKind.Relative));
+            eatMediaPlayer.Play();
+        }
+
+        private static void PlayStartGameSound()
+        {
+            var startGameMediaPlayer = new MediaPlayer();
+            startGameMediaPlayer.Open(new Uri("../../../Sounds/StartGame.mp3", UriKind.Relative));
+            startGameMediaPlayer.Play();
+        }
+
+        private static void PlayOpenAppSound()
+        {
+            var openAppMediaPlayer = new MediaPlayer();
+            openAppMediaPlayer.Open(new Uri("../../../Sounds/OpenApp.mp3", UriKind.Relative));
+            openAppMediaPlayer.Play();
         }
 
         private void MainWindow_OnMouseDown(object sender, MouseButtonEventArgs e)
@@ -128,7 +172,7 @@ namespace SnakeGame
         {
             var serializer = new XmlSerializer(typeof(ObservableCollection<HighScore>));
 
-            using (Stream writer = new FileStream("snake_highscorelist.xml", FileMode.Create))
+            using (Stream writer = new FileStream("HighScoreList.xml", FileMode.Create))
             {
                 serializer.Serialize(writer, HighScores);
             }
@@ -197,6 +241,7 @@ namespace SnakeGame
 
             DrawSnake();
             DrawSnakeFood();
+            PlayStartGameSound();
 
             UpdateGameStatus();
             _timer.IsEnabled = true;
@@ -304,21 +349,27 @@ namespace SnakeGame
 
             if (snakeHead.Position.X == Canvas.GetLeft(_snakeFood) &&
                 snakeHead.Position.Y == Canvas.GetTop(_snakeFood))
-                EatSnakeFood();
+                EatFood();
 
             if (snakeHead.Position.Y < 0 ||
                 snakeHead.Position.Y >= GameArea.ActualHeight ||
                 snakeHead.Position.X < 0 ||
                 snakeHead.Position.X >= GameArea.ActualWidth)
+            {
+                PlayCrashWallSound();
                 EndGame();
+            }
 
             foreach (SnakeSegment snakeSegment in _snakeSegments.Take(_snakeSegments.Count - 1))
                 if (snakeHead.Position.X == snakeSegment.Position.X &&
                     snakeHead.Position.Y == snakeSegment.Position.Y)
+                {
+                    PlayCrashSelfSound();
                     EndGame();
+                }
         }
 
-        private void EatSnakeFood()
+        private void EatFood()
         {
             _snakeLength++;
             _currentScore++;
@@ -327,8 +378,9 @@ namespace SnakeGame
             _timer.Interval = TimeSpan.FromMilliseconds(timerInterval);
 
             GameArea.Children.Remove(_snakeFood);
-            DrawSnakeFood();
+            PlayEatSound();
 
+            DrawSnakeFood();
             UpdateGameStatus();
         }
 
@@ -340,6 +392,8 @@ namespace SnakeGame
 
         private void EndGame()
         {
+            PlayGameOverSound();
+
             var isNewHighScore = false;
 
             if (_currentScore > 0)
@@ -375,7 +429,7 @@ namespace SnakeGame
             if (HighScores.Count > 0 && _currentScore < HighScores.Max(hs => hs.Score))
             {
                 HighScore scoreAboveCurrentScore = HighScores
-                    .OrderByDescending(hs => hs.Score)
+                    .OrderBy(hs => hs.Score)
                     .First(hs => hs.Score >= _currentScore);
 
                 if (scoreAboveCurrentScore != null)
